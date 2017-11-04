@@ -56,6 +56,7 @@ def exit_handler(signal, frame):
 
 
 if __name__ == "__main__":
+    #time.sleep(5)
     ipcon = IPConnection() # Create IP connection
     cb = BrickletColor(UID, ipcon) # Create device object
     master = BrickMaster(MASTERBRICK_UID, ipcon) # Create device object
@@ -75,8 +76,11 @@ if __name__ == "__main__":
     # Note: The color callback is only called every second
     #       if the color has changed since the last call!
     #cb.set_color_callback_period(1000)
-    cb.set_color_temperature_callback_period(1000)
-    cb.set_illuminance_callback_period(1000)
+    try:
+	cb.set_color_temperature_callback_period(1000)
+	cb.set_illuminance_callback_period(1000)
+    except:
+	pass
 
     # Turn off blue LED on master brick so that it doesn't interfere with colour temperature measurements
     master.disable_status_led()
