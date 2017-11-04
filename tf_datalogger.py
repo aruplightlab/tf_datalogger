@@ -4,6 +4,7 @@
 # Tinkerforge colour temperature and illuminance sensor with redbrick
 # 2017-09-01 francesco.anselmo@arup.com
 
+from config import *
 import time, datetime
 import signal
 import sys
@@ -12,27 +13,7 @@ from tinkerforge.ip_connection import IPConnection
 from tinkerforge.bricklet_color import BrickletColor
 from tinkerforge.brick_master import BrickMaster
 from tinkerforge.brick_red import RED
-
 from influxdb import InfluxDBClient
-
-HOST = "localhost"
-PORT = 4223
-UID = "xZh" # Change XYZ to the UID of your Color Bricklet "oy6"
-REDBRICK_UID = "2QnPSH"
-MASTERBRICK_UID = "6e8Qg4"
-ROOTDIR = "/home/tf"
-FILENAMEINST = join(ROOTDIR,"dataINST.csv")
-FILENAMEAVG = join(ROOTDIR,"dataAVG.csv")
-INTERVAL = 5 # Instantaneous interval in seconds
-INTEGRATIONTIME = 20 # Integration interval in seconds
-
-INFLUXserver = 'put here address of influxdb server'
-INFLUXport =  '8086'
-INFLUXdbname = 'put here dbname'
-INFLUXdbuser = 'put here dbuser'
-INFLUXdbuser_password = 'put here dbpassword'
-
-SENSORNAME = 'put here sensor name'
 
 col_temp_inst = 0
 ill_inst = 0
@@ -107,8 +88,9 @@ if __name__ == "__main__":
     favg = open(FILENAMEAVG, "a")
 
     # Connect to InfluxDB server
-    print("Connecting to InfluxDB server %s" % INFLUXserver)
-    client = InfluxDBClient(INFLUXserver, INFLUXport, INFLUXdbuser, INFLUXdbuser_password, INFLUXdbname)
+    if useInflux:
+        print("Connecting to InfluxDB server %s" % INFLUXserver)
+        client = InfluxDBClient(INFLUXserver, INFLUXport, INFLUXdbuser, INFLUXdbuser_password, INFLUXdbname)
 
     prev_time = time.time()
     prev_integ_time = time.time()
@@ -129,9 +111,10 @@ if __name__ == "__main__":
             print ("instantaneous measurement at "+str(INTERVAL)+" s", datestr, ct, illum)
             finst.write(datestr + "," + str(ct) + "," + str(illum) +'\n')
             finst.flush()
-            # Write colour_temperature
-            json_body = [
-                {
+            if useInflux:
+                # Write colour_temperature to influxdb server
+                json_body = [
+                    {
                     "measurement": SENSORNAME+"_"+'colour_temperature',
                     "tags": {
                         "sensor": SENSORNAME+"_average",
@@ -139,13 +122,13 @@ if __name__ == "__main__":
                     "time": datestr,
                     "fields": {
                         "value": ct,
+                        }
                     }
-                }
-            ]
-            client.write_points(json_body)
-            # Write illuminance
-            json_body = [
-                {
+                ]
+                client.write_points(json_body)
+                # Write illuminance
+                json_body = [
+                    {
                     "measurement": SENSORNAME+"_"+'illuminance',
                     "tags": {
                         "sensor": SENSORNAME+"_average",
@@ -153,24 +136,25 @@ if __name__ == "__main__":
                     "time": datestr,
                     "fields": {
                         "value": illum,
+                        }
                     }
-                }
-            ]
-            client.write_points(json_body)
+                ]
+                client.write_points(json_body)
             # Reset time counter
             prev_time = time.time()
 
         # Write values at integration interval
         if time.time()-prev_integ_time > INTEGRATIONTIME:
-            ct = sum(col_temp)/len(col_temp) #col_temp[-1]
-            illum = sum(ill)/len(ill) #ill[-1]
+            ct = sum(col_temp)/(len(col_temp)+1) #col_temp[-1]
+            illum = sum(ill)/(len(ill)+1) #ill[-1]
             print (datestr, col_temp, ill)
             print ("integrated measurement at "+str(INTEGRATIONTIME)+" s", datestr, ct, illum)
             favg.write(datestr + "," + str(ct) + "," + str(illum) +'\n')
             favg.flush()
-            # write colour_temperature
-            json_body = [
-                {
+            if useInflux:
+                # write colour_temperature to influxdb server
+                json_body = [
+                    {
                     "measurement": SENSORNAME+"_"+'colour_temperature_average',
                     "tags": {
                         "sensor": SENSORNAME+"_average",
@@ -178,13 +162,13 @@ if __name__ == "__main__":
                     "time": datestr,
                     "fields": {
                         "value": ct,
+                        }
                     }
-                }
-            ]
-            client.write_points(json_body)
-            # Write illuminance
-            json_body = [
-                {
+                ]
+                client.write_points(json_body)
+                # Write illuminance
+                json_body = [
+                    {
                     "measurement": SENSORNAME+"_"+'illuminance_average',
                     "tags": {
                         "sensor": SENSORNAME+"_average",
@@ -192,10 +176,10 @@ if __name__ == "__main__":
                     "time": datestr,
                     "fields": {
                         "value": illum,
+                        }
                     }
-                }
-            ]
-            client.write_points(json_body)
+                ]
+                client.write_points(json_body)
             # Reset arrays and time couter
             col_temp = []
             ill = []
